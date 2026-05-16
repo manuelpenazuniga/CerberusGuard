@@ -239,7 +239,8 @@ tasks:
     depends_on: [T001, T002, T003, T004, T005]
     estimate_minutes: 5
     owner_role: lead
-    status: pending
+    status: blocked
+    blocked_reason: "Acceptance criterion requires HEAD to contain only bootstrap files, but repository already has post-bootstrap deliverables."
     refs: []
 
   # ---------------------------------------------------------------------------
