@@ -927,7 +927,7 @@ tasks:
     depends_on: []
     estimate_minutes: 60
     owner_role: frontend
-    status: pending
+    status: in_progress
     refs: []
 
   - id: T407
