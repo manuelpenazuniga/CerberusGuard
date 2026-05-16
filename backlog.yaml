@@ -357,7 +357,7 @@ tasks:
     depends_on: [T002]
     estimate_minutes: 45
     owner_role: backend
-    status: pending
+    status: in_progress
     refs:
       - docs/AGENTTRUST_REPO_CLAUDE.md#step-1.4
       - docs/AGENTTRUST_PROJECT.md#4.2
