@@ -506,7 +506,7 @@ tasks:
     depends_on: [T105, T201]
     estimate_minutes: 40
     owner_role: backend
-    status: in_progress
+    status: done
     refs: []
 
   - id: T203
