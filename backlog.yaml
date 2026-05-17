@@ -558,7 +558,7 @@ tasks:
     depends_on: [T203]
     estimate_minutes: 20
     owner_role: lead
-    status: pending
+    status: in_progress
     refs:
       - docs/AGENTTRUST_PROJECT.md#4.7
 
