@@ -65,6 +65,7 @@ def normalize_verdict(raw: str | None) -> str:
 
 
 def map_lobstertrap_event(raw: dict[str, Any]) -> dict[str, Any]:
+    forced_correlation_id = os.environ.get("CERBERUS_CORRELATION_ID")
     payload = {
         k: v
         for k, v in raw.items()
@@ -79,7 +80,8 @@ def map_lobstertrap_event(raw: dict[str, Any]) -> dict[str, Any]:
         }
     }
     correlation_id = str(
-        raw.get("correlation_id")
+        forced_correlation_id
+        or raw.get("correlation_id")
         or raw.get("session_id")
         or raw.get("request_id")
         or f"lt-{int(time.time() * 1000)}"

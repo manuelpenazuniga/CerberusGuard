@@ -18,6 +18,7 @@ class AdapterConfig:
     runs_root: Path
     collector_url: str
     follow: bool
+    correlation_map: Path
 
 
 def parse_args(argv: list[str] | None = None) -> AdapterConfig:
@@ -46,6 +47,12 @@ def parse_args(argv: list[str] | None = None) -> AdapterConfig:
         runs_root=args.runs_root,
         collector_url=args.collector.rstrip("/"),
         follow=not args.no_follow,
+        correlation_map=Path(
+            os.environ.get(
+                "CERBERUS_CLAWCRATE_CORRELATION_MAP",
+                str(Path.home() / ".clawcrate" / "correlation_map.json"),
+            )
+        ),
     )
 
 
@@ -68,7 +75,7 @@ def verdict_from_event(name: str, payload: dict[str, Any]) -> str:
     return "LOG"
 
 
-def map_clawcrate_event(raw: dict[str, Any], run_id: str) -> dict[str, Any]:
+def map_clawcrate_event(raw: dict[str, Any], run_id: str, correlation_id: str) -> dict[str, Any]:
     name = event_name(raw)
     payload_obj = {}
     event = raw.get("event")
@@ -82,7 +89,7 @@ def map_clawcrate_event(raw: dict[str, Any], run_id: str) -> dict[str, Any]:
         "timestamp": str(raw.get("timestamp") or default_timestamp()),
         "agent_id": "clawcrate-adapter",
         "request_id": None,
-        "correlation_id": run_id,
+        "correlation_id": correlation_id,
         "layer": "claw_crate",
         "verdict": verdict_from_event(name, payload_obj),
         "action": name,
@@ -112,6 +119,7 @@ def iter_audit_files(runs_root: Path) -> list[Path]:
 
 def process_audit_file(path: Path, client: httpx.Client, collector_url: str) -> None:
     run_id = path.parent.name
+    correlation_id = resolve_correlation_id(run_id)
     with path.open("r", encoding="utf-8") as fh:
         for line in fh:
             stripped = line.strip()
@@ -124,12 +132,14 @@ def process_audit_file(path: Path, client: httpx.Client, collector_url: str) -> 
                 continue
             if not isinstance(raw, dict):
                 continue
-            mapped = map_clawcrate_event(raw, run_id=run_id)
+            mapped = map_clawcrate_event(raw, run_id=run_id, correlation_id=correlation_id)
             post_event(client, collector_url, mapped)
 
 
 def run(config: AdapterConfig) -> int:
     seen: set[Path] = set()
+    global _CORRELATION_MAP_PATH
+    _CORRELATION_MAP_PATH = config.correlation_map
     with httpx.Client() as client:
         while True:
             for path in iter_audit_files(config.runs_root):
@@ -140,6 +150,22 @@ def run(config: AdapterConfig) -> int:
             if not config.follow:
                 return 0
             time.sleep(0.5)
+
+
+_CORRELATION_MAP_PATH = Path.home() / ".clawcrate" / "correlation_map.json"
+
+
+def resolve_correlation_id(run_id: str) -> str:
+    path = _CORRELATION_MAP_PATH
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            mapped = data.get(run_id)
+            if isinstance(mapped, str) and mapped:
+                return mapped
+        except json.JSONDecodeError:
+            return run_id
+    return run_id
 
 
 def main(argv: list[str] | None = None) -> int:
