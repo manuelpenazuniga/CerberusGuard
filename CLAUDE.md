@@ -141,6 +141,8 @@ Total added latency across Head 1 + Head 2 must be < **50 ms p95** on a typical 
 
 If you write `await collector.post(event)` in the critical path, that's a bug. Use a queue + background flush.
 
+Baseline measurement (2026-05-17, local mock chain via `demo/start-chain.sh`): `p95_ms=36.87`.
+
 ### 2.8 Storage: SQLite first, DuckDB later
 
 The original draft in `AGENTTRUST_PROJECT.md` proposed DuckDB. We're starting with **SQLite + JSON1** instead. Reasons:

@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COLLECTOR_DB="${COLLECTOR_DB:-/private/tmp/cerberusguard-t201.sqlite}"
 PENNY_DB="${PENNY_DB:-/private/tmp/pennyprompt-t201.sqlite}"
 LT_AUDIT_LOG="${LT_AUDIT_LOG:-/private/tmp/lt-t201.jsonl}"
+PP_AUDIT_LOG="${PP_AUDIT_LOG:-/private/tmp/pp-t201.ndjson}"
 COLLECTOR_URL="${COLLECTOR_URL:-http://127.0.0.1:9090}"
 
 LT_BIN="$ROOT_DIR/external/lobstertrap/lobstertrap"
@@ -29,10 +30,11 @@ cleanup() {
   pkill -f "lobstertrap serve" >/dev/null 2>&1 || true
   pkill -f "penny-cli --database $PENNY_DB serve" >/dev/null 2>&1 || true
   pkill -f "cerberusguard.adapters.lobstertrap $LT_AUDIT_LOG" >/dev/null 2>&1 || true
+  pkill -f "cerberusguard.adapters.pennyprompt $PP_AUDIT_LOG" >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
-rm -f "$COLLECTOR_DB" "$PENNY_DB" "$LT_AUDIT_LOG"
+rm -f "$COLLECTOR_DB" "$PENNY_DB" "$LT_AUDIT_LOG" "$PP_AUDIT_LOG"
 
 (
   cd "$ROOT_DIR"
@@ -40,14 +42,15 @@ rm -f "$COLLECTOR_DB" "$PENNY_DB" "$LT_AUDIT_LOG"
 ) >/tmp/cerberus-t201-collector.log 2>&1 &
 
 "$PP_BIN" --database "$PENNY_DB" init --force >/tmp/cerberus-t201-pp-init.log 2>&1
-"$PP_BIN" --database "$PENNY_DB" serve --mock --proxy-bind 127.0.0.1:8787 --admin-bind 127.0.0.1:8586 >/tmp/cerberus-t201-pp.log 2>&1 &
+"$PP_BIN" --database "$PENNY_DB" serve --mock --proxy-bind 127.0.0.1:8787 --admin-bind 127.0.0.1:8586 --json-log >"$PP_AUDIT_LOG" 2>&1 &
 
 (
   cd "$ROOT_DIR/external/lobstertrap"
   ./lobstertrap serve --audit-log "$LT_AUDIT_LOG" --policy ./configs/default_policy.yaml --backend http://127.0.0.1:8787
 ) >/tmp/cerberus-t201-lt.log 2>&1 &
 
-"$PYTHON_BIN" -m cerberusguard.adapters.lobstertrap "$LT_AUDIT_LOG" --collector "$COLLECTOR_URL" >/tmp/cerberus-t201-lt-adapter.log 2>&1 &
+CERBERUS_CORRELATION_ID=corr-t201 "$PYTHON_BIN" -m cerberusguard.adapters.lobstertrap "$LT_AUDIT_LOG" --collector "$COLLECTOR_URL" >/tmp/cerberus-t201-lt-adapter.log 2>&1 &
+CERBERUS_CORRELATION_ID=corr-t201 "$PYTHON_BIN" -m cerberusguard.adapters.pennyprompt "$PP_AUDIT_LOG" --collector "$COLLECTOR_URL" >/tmp/cerberus-t201-pp-adapter.log 2>&1 &
 
 sleep 2
 curl -fsS "$COLLECTOR_URL/health" >/dev/null
@@ -74,24 +77,6 @@ if [[ -z "$LATEST_LT_CORR" ]]; then
   echo "No lobster_trap event observed in collector" >&2
   exit 1
 fi
-
-PENNY_REQ_ID="$(awk 'BEGIN{IGNORECASE=1}/^x-penny-request-id:/{print $2}' "$SMOKE_RESPONSE_HEADERS" | tr -d '\r' | tail -n 1)"
-if [[ -z "$PENNY_REQ_ID" ]]; then
-  PENNY_REQ_ID="pp-missing-request-id"
-fi
-
-curl -fsS -X POST "$COLLECTOR_URL/events" \
-  -H 'Content-Type: application/json' \
-  -d "{
-    \"timestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",
-    \"agent_id\":\"pennyprompt-proxy\",
-    \"request_id\":\"$PENNY_REQ_ID\",
-    \"correlation_id\":\"$LATEST_LT_CORR\",
-    \"layer\":\"penny_prompt\",
-    \"verdict\":\"DENY\",
-    \"action\":\"budget_guard\",
-    \"payload\":{\"source\":\"t201-chain\",\"http_status\":$HTTP_CODE}
-  }" >/dev/null
 
 sleep 1
 CORR_CHECK="$(

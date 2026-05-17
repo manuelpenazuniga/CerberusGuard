@@ -75,8 +75,10 @@ def verdict_from_event(raw: dict[str, Any]) -> str:
 
 
 def map_pennyprompt_event(raw: dict[str, Any]) -> dict[str, Any]:
+    forced_correlation_id = os.environ.get("CERBERUS_CORRELATION_ID")
     correlation_id = str(
-        raw.get("correlation_id")
+        forced_correlation_id
+        or raw.get("correlation_id")
         or raw.get("request_id")
         or raw.get("x_request_id")
         or f"pp-{int(time.time() * 1000)}"
