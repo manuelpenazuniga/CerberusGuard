@@ -780,7 +780,7 @@ tasks:
     depends_on: [T206, T301, T302]
     estimate_minutes: 90
     owner_role: backend
-    status: pending
+    status: in_progress
     refs:
       - docs/AGENTTRUST_REPO_CLAUDE.md#step-3.3
 
