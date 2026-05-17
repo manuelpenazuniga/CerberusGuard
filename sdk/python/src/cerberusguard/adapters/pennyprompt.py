@@ -152,10 +152,29 @@ def post_event(client: httpx.Client, collector_url: str, event: dict[str, Any]) 
         print(f"[pennyprompt-adapter] collector unreachable: {err}", file=sys.stderr)
 
 
+def wait_for_log(log_path: Path, *, timeout_seconds: float = 120.0) -> bool:
+    """Wait for the PennyPrompt audit log to appear. PP creates it lazily on
+    first emission, so an adapter spawned by an orchestrator may race ahead."""
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        if log_path.exists():
+            return True
+        time.sleep(0.5)
+    return False
+
+
 def run(config: AdapterConfig) -> int:
     if not config.log_path.exists():
-        print(f"[pennyprompt-adapter] file not found: {config.log_path}", file=sys.stderr)
-        return 1
+        print(
+            f"[pennyprompt-adapter] waiting for {config.log_path} (created lazily by PP)...",
+            file=sys.stderr,
+        )
+        if not wait_for_log(config.log_path):
+            print(
+                f"[pennyprompt-adapter] timed out waiting for {config.log_path}",
+                file=sys.stderr,
+            )
+            return 1
     with httpx.Client() as client:
         for raw_event in read_ndjson(config.log_path, follow=config.follow):
             mapped = map_pennyprompt_event(raw_event)
