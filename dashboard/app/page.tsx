@@ -48,6 +48,7 @@ export default function Home() {
   const [events, setEvents] = useState<TrustEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [correlationFilter, setCorrelationFilter] = useState("");
+  const [flashingRows, setFlashingRows] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -60,7 +61,36 @@ export default function Home() {
         }
         const data = (await response.json()) as TrustEvent[];
         if (!cancelled) {
-          setEvents(Array.isArray(data) ? data : []);
+          const incoming = Array.isArray(data) ? data : [];
+          setEvents((previous) => {
+            const previousKeys = new Set(previous.map((event, idx) => `${event.correlation_id}-${idx}-${event.timestamp}`));
+            const newFlashes: string[] = [];
+            incoming.forEach((event, idx) => {
+              const key = `${event.correlation_id}-${idx}-${event.timestamp}`;
+              if (event.verdict === "DENY" && !previousKeys.has(key)) {
+                newFlashes.push(key);
+              }
+            });
+            if (newFlashes.length > 0) {
+              setFlashingRows((current) => {
+                const next = { ...current };
+                newFlashes.forEach((key) => {
+                  next[key] = true;
+                });
+                return next;
+              });
+              window.setTimeout(() => {
+                setFlashingRows((current) => {
+                  const next = { ...current };
+                  newFlashes.forEach((key) => {
+                    delete next[key];
+                  });
+                  return next;
+                });
+              }, 600);
+            }
+            return incoming;
+          });
           setError(null);
         }
       } catch (err) {
@@ -86,6 +116,13 @@ export default function Home() {
     return events.filter((event) => event.correlation_id.toLowerCase().includes(filter));
   }, [events, correlationFilter]);
 
+  const summary = useMemo(() => {
+    const total = rows.length;
+    const blocked = rows.filter((event) => event.verdict === "DENY").length;
+    const layerCount = new Set(rows.map((event) => event.layer)).size;
+    return { total, blocked, layerCount };
+  }, [rows]);
+
   return (
     <main className="min-h-screen bg-slate-950 p-6 text-slate-100">
       <div className="mx-auto max-w-7xl">
@@ -99,8 +136,11 @@ export default function Home() {
             className="w-full max-w-md rounded border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-slate-500"
           />
         </div>
+        <div className="mt-4 rounded border border-slate-800 bg-slate-900 px-4 py-3 text-sm font-medium text-slate-200">
+          {summary.total} events · {summary.blocked} blocked · {summary.layerCount} layers active
+        </div>
         {error ? <p className="mt-3 text-sm text-red-300">Collector error: {error}</p> : null}
-        <div className="mt-6 overflow-x-auto rounded-lg border border-slate-800 bg-slate-900">
+        <div className="mt-6 max-h-[72vh] overflow-auto rounded-lg border border-slate-800 bg-slate-900">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-slate-800/80 text-slate-200">
               <tr>
@@ -114,20 +154,22 @@ export default function Home() {
             </thead>
             <tbody>
               {rows.map((event, idx) => {
+                const rowKey = `${event.correlation_id}-${idx}-${event.timestamp}`;
                 const rowTone =
                   event.verdict === "DENY"
                     ? "bg-red-950/40"
                     : event.verdict === "HUMAN_REVIEW"
                       ? "bg-yellow-900/25"
                       : "bg-transparent";
+                const flashTone = flashingRows[rowKey] ? "bg-red-500/50 transition-colors duration-500" : "";
                 return (
-                  <tr key={`${event.correlation_id}-${idx}`} className={`border-t border-slate-800 ${rowTone}`}>
-                    <td className="px-4 py-3">{new Date(event.timestamp).toLocaleTimeString()}</td>
-                    <td className="px-4 py-3">{event.agent_id}</td>
-                    <td className="px-4 py-3"><LayerBadge layer={event.layer} /></td>
-                    <td className="px-4 py-3"><VerdictBadge verdict={event.verdict} /></td>
-                    <td className="px-4 py-3">{event.action}</td>
-                    <td className="px-4 py-3">
+                  <tr key={rowKey} className={`border-t border-slate-800 ${rowTone} ${flashTone}`}>
+                    <td className="px-4 py-2">{new Date(event.timestamp).toLocaleTimeString()}</td>
+                    <td className="px-4 py-2">{event.agent_id}</td>
+                    <td className="px-4 py-2"><LayerBadge layer={event.layer} /></td>
+                    <td className="px-4 py-2 text-base font-bold"><VerdictBadge verdict={event.verdict} /></td>
+                    <td className="px-4 py-2">{event.action}</td>
+                    <td className="px-4 py-2">
                       <button
                         type="button"
                         onClick={() => setCorrelationFilter(event.correlation_id)}
