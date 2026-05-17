@@ -609,7 +609,7 @@ tasks:
     depends_on: [T105, T201, T205]
     estimate_minutes: 75
     owner_role: lead
-    status: pending
+    status: in_progress
     refs:
       - docs/AGENTTRUST_REPO_CLAUDE.md#step-2.5
       - docs/AGENTTRUST_PROJECT.md (Python SDK section)
