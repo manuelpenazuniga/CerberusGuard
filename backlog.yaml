@@ -691,7 +691,7 @@ tasks:
     depends_on: [T209]
     estimate_minutes: 15
     owner_role: backend
-    status: pending
+    status: in_progress
     refs:
       - CLAUDE.md#2.7
       - demo/start-chain.sh
