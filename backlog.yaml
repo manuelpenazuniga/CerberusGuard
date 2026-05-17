@@ -851,7 +851,7 @@ tasks:
     depends_on: [T304, T305]
     estimate_minutes: 60
     owner_role: lead
-    status: pending
+    status: in_progress
     refs:
       - docs/AGENTTRUST_REPO_CLAUDE.md#day-3-verification
 
