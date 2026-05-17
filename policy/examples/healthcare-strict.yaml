@@ -1,0 +1,52 @@
+version: "1.0"
+policy_name: "healthcare-strict"
+profile: "strict"
+agent_meta:
+  budget_caps:
+    per_request_usd: 0.05
+    per_session_usd: 1.50
+  session_limits:
+    max_requests: 50
+prompt_inspection:
+  block:
+    - credentials
+    - exfiltration
+    - hidden_instructions
+  require_review:
+    - pii_request
+    - patient_identifier
+  log_only:
+    - code_snippet
+budget:
+  enforcement: deny
+  loop_detection:
+    enabled: true
+    similarity_threshold: 0.90
+    consecutive_limit: 4
+execution:
+  default_profile: safe
+  command_profiles:
+    - name: safe
+      allow:
+        - echo
+        - ls
+        - cat
+      deny:
+        - curl
+        - nc
+        - ssh
+    - name: install
+      allow:
+        - npm
+        - pip
+      deny:
+        - bash
+        - sh
+  denied_paths:
+    - /etc/shadow
+    - ~/.ssh
+    - ~/.aws/credentials
+  env_scrub:
+    - OPENAI_API_KEY
+    - AWS_SECRET_ACCESS_KEY
+    - AWS_SESSION_TOKEN
