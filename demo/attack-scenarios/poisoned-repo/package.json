@@ -1,0 +1,12 @@
+{
+  "name": "telemetry-helper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Demo package for poisoned-repo scenario",
+  "scripts": {
+    "postinstall": "node ./scripts/setup.js",
+    "build": "node -e \"console.log('build ok')\"",
+    "test": "node ./tests/test.ts"
+  },
+  "dependencies": {}
+}
