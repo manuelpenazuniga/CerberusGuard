@@ -231,17 +231,25 @@ tasks:
       Stage LICENSE, .gitignore, README.md, CLAUDE.md, backlog.yaml.
       Commit with message: `chore: bootstrap CerberusGuard repository`.
       Push to origin/main. Verify the GitHub web UI shows the files publicly.
+
+      HISTORICAL NOTE (2026-05-16, Opus re-plan): this task was executed during
+      the Opus 4.7 bootstrap session as commit `1cbb2e8` and pushed to
+      `origin/main` in the same session. It was inadvertently left with
+      `status: pending` in the handed-off backlog and the original criteria
+      were anchored to HEAD — which advanced as soon as later tasks (T104,
+      T406) merged. Criteria below are now anchored to the bootstrap commit
+      hash so they remain verifiable as HEAD advances.
     acceptance_criteria:
-      - "`git log --oneline` shows the bootstrap commit"
-      - "`git ls-tree -r HEAD --name-only` lists exactly: LICENSE, README.md, CLAUDE.md, backlog.yaml, .gitignore"
-      - "`docs/` is NOT in the tree (verifies gitignore worked)"
-      - "`git push origin main` succeeds"
+      - "`git log --format=%s 1cbb2e8 -1` prints `chore: bootstrap CerberusGuard repository`"
+      - "`git ls-tree -r 1cbb2e8 --name-only` lists exactly the 5 bootstrap files: .gitignore, CLAUDE.md, LICENSE, README.md, backlog.yaml"
+      - "`git ls-tree -r 1cbb2e8 --name-only | grep -c '^docs/'` returns 0 (no docs/ leaked into the bootstrap commit)"
+      - "`git branch --contains 1cbb2e8 -r` includes `origin/main` (commit is on the public remote)"
     depends_on: [T001, T002, T003, T004, T005]
     estimate_minutes: 5
     owner_role: lead
-    status: blocked
-    blocked_reason: "Acceptance criterion requires HEAD to contain only bootstrap files, but repository already has post-bootstrap deliverables."
-    refs: []
+    status: done
+    refs:
+      - "commit: 1cbb2e8"
 
   # ---------------------------------------------------------------------------
   # E01 — Foundation (roadmap Day 1, compressed into 2026-05-16 afternoon)
