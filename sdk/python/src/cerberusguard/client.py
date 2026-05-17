@@ -9,7 +9,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
-from datetime import UTC, datetime
 
 import httpx
 
@@ -60,12 +59,6 @@ class CerberusClient:
                 data = response.json()
             except ValueError:
                 data = {"status_code": response.status_code, "text": response.text}
-        emit_pennyprompt_event(
-            agent_id=self.agent_id,
-            correlation_id=self.correlation_id,
-            request_id=response.headers.get("x-penny-request-id"),
-            model=str(payload.get("model", "")),
-        )
         return data
 
     def exec(self, command: str, *, profile: str = "safe") -> ExecResult:
@@ -119,31 +112,3 @@ def write_correlation_map(execution_id: str, correlation_id: str) -> None:
             mapping = {}
     mapping[execution_id] = correlation_id
     map_path.write_text(json.dumps(mapping), encoding="utf-8")
-
-
-def emit_pennyprompt_event(
-    *,
-    agent_id: str,
-    correlation_id: str,
-    request_id: str | None,
-    model: str,
-) -> None:
-    collector_url = os.environ.get("CERBERUS_COLLECTOR_URL", "http://127.0.0.1:9090").rstrip("/")
-    event = {
-        "timestamp": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-        "agent_id": agent_id,
-        "request_id": request_id,
-        "correlation_id": correlation_id,
-        "layer": "penny_prompt",
-        "verdict": "LOG",
-        "action": "proxy_forward",
-        "payload": {
-            "model": model,
-            "source": "cerberus-client",
-        },
-    }
-    try:
-        with httpx.Client(timeout=2.0) as client:
-            client.post(f"{collector_url}/events", json=event)
-    except Exception:
-        return

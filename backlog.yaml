@@ -669,7 +669,7 @@ tasks:
     depends_on: [T208]
     estimate_minutes: 20
     owner_role: backend
-    status: in_progress
+    status: done
     refs:
       - CLAUDE.md#2.4
       - CLAUDE.md#6.3
