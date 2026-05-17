@@ -654,6 +654,48 @@ tasks:
     refs:
       - docs/AGENTTRUST_REPO_CLAUDE.md#day-2-verification
 
+  - id: T209
+    epic: E02
+    title: "Remove synthetic PennyPrompt event emission from CerberusClient"
+    description: |
+      Remove the `emit_pennyprompt_event` workaround from
+      sdk/python/cerberusguard/client.py. PennyPrompt events must come from the
+      dedicated adapter (T202), not from client-side synthetic posts.
+      Keep `chat()` and `exec()` behavior intact otherwise.
+    acceptance_criteria:
+      - "`sdk/python/src/cerberusguard/client.py` no longer contains synthetic collector POST logic for `layer: penny_prompt`"
+      - "`client.chat(...)` still works against LT -> PP chain"
+      - "PennyPrompt events in collector are produced by adapter path (T202), not client injection"
+    depends_on: [T208]
+    estimate_minutes: 20
+    owner_role: backend
+    status: in_progress
+    refs:
+      - CLAUDE.md#2.4
+      - CLAUDE.md#6.3
+
+  - id: T210
+    epic: E02
+    title: "Re-run start-chain with real PennyPrompt and record p95 latency"
+    description: |
+      Re-run `demo/start-chain.sh` now that `config/default.toml` is present
+      and PennyPrompt `serve` starts with the expected schema.
+      Ensure the chain uses the real PennyPrompt adapter path
+      (`external/pennyprompt/target/release/penny-cli`) and that PP events are
+      adapter-driven. Capture the p95 latency reported by the benchmark block
+      in the script and record it in CLAUDE.md or WRITEUP.
+    acceptance_criteria:
+      - "`demo/start-chain.sh` runs successfully end-to-end with real PennyPrompt serve"
+      - "Collector receives both `lobster_trap` and `penny_prompt` events without synthetic client injection"
+      - "A concrete p95 latency value is documented in CLAUDE.md or WRITEUP"
+    depends_on: [T209]
+    estimate_minutes: 15
+    owner_role: backend
+    status: pending
+    refs:
+      - CLAUDE.md#2.7
+      - demo/start-chain.sh
+
   # ---------------------------------------------------------------------------
   # E03 — Demo (roadmap Day 3, the critical day)
   # ---------------------------------------------------------------------------
@@ -682,7 +724,7 @@ tasks:
       - "README.md visibly contains a prompt-injection block (a code comment or HTML comment with @AI_AGENT_INSTRUCTION)"
       - "package.json passes `npm install --dry-run` (syntactically valid)"
       - "demo/SAFETY.md explains why each file is safe to commit and how to run the demo without risk"
-    depends_on: [T208]
+    depends_on: [T210]
     estimate_minutes: 50
     owner_role: backend
     status: pending
