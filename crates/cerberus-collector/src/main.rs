@@ -93,18 +93,17 @@ async fn post_event(
     State(state): State<AppState>,
     Json(event): Json<TrustEvent>,
 ) -> impl IntoResponse {
+    // `payload` is free-form JSON, so re-serialisation can in principle fail
+    // (although in practice arbitrary `serde_json::Value` always serialises).
     let payload = match serde_json::to_string(&event.payload) {
         Ok(value) => value,
         Err(err) => return (StatusCode::BAD_REQUEST, format!("invalid payload json: {err}")),
     };
-    let layer = match serde_json::to_string(&event.layer) {
-        Ok(value) => value.trim_matches('"').to_string(),
-        Err(err) => return (StatusCode::BAD_REQUEST, format!("invalid layer: {err}")),
-    };
-    let verdict = match serde_json::to_string(&event.verdict) {
-        Ok(value) => value.trim_matches('"').to_string(),
-        Err(err) => return (StatusCode::BAD_REQUEST, format!("invalid verdict: {err}")),
-    };
+    // Layer/Verdict are payload-less enums; `as_str()` is infallible by
+    // construction and matches the serde-serialised form exactly (guarded
+    // by `as_str_matches_serde_serialised_form` in cerberus-types tests).
+    let layer = event.layer.as_str();
+    let verdict = event.verdict.as_str();
 
     let conn = match state.db.lock() {
         Ok(guard) => guard,
