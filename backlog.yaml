@@ -629,7 +629,7 @@ tasks:
     depends_on: [T106]
     estimate_minutes: 30
     owner_role: frontend
-    status: pending
+    status: in_progress
     refs: []
 
   - id: T208
