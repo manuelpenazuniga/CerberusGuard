@@ -143,3 +143,13 @@ $RECYCLE.BIN/
 # Local-only Claude Code config (per-user agent preferences)
 # -----------------------------------------------------------------------------
 .claude/settings.local.json
+
+# -----------------------------------------------------------------------------
+# Auto-generated agent guidance from create-next-app v16
+# -----------------------------------------------------------------------------
+# `create-next-app` v16 drops AGENTS.md and CLAUDE.md inside dashboard/ to warn
+# AI coding agents about breaking changes vs older Next.js versions. We keep
+# them out of the public repo per project preference; the warning is captured
+# in our root CLAUDE.md instead.
+dashboard/AGENTS.md
+dashboard/CLAUDE.md

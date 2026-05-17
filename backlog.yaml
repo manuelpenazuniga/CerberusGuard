@@ -50,6 +50,15 @@ meta:
     - "Custom landing page cancelled (dashboard at :3000 doubles as landing)"
     - "ghcr.io pre-built images cancelled (docker-compose only)"
     - "Storage: SQLite + JSON1, NOT DuckDB (build stability)"
+  external_binary_paths:
+    # Source of truth for vendored upstream binary paths. Use these in any
+    # task that invokes a primitive (T201, T203, T205, T206, T303, T304, ...).
+    # Added 2026-05-16 after E01 review revealed T104's original AC assumed
+    # PennyPrompt's binary was named `pennyprompt`, but Cargo builds it as
+    # `penny-cli`. Honour these paths to avoid drift.
+    lobstertrap: "external/lobstertrap/lobstertrap"
+    pennyprompt: "external/pennyprompt/target/release/penny-cli"
+    clawcrate:   "external/clawcrate/target/release/clawcrate"
 
 # =============================================================================
 # EPICS — high-level groupings, roughly aligned to roadmap days
@@ -359,8 +368,8 @@ tasks:
       For now, just commit a placeholder `LOCAL_SETUP.md` at the repo root.
     acceptance_criteria:
       - "`./external/lobstertrap/lobstertrap --help` prints usage"
-      - "`./external/pennyprompt/target/release/pennyprompt --help` prints usage"
-      - "`./external/clawcrate/target/release/clawcrate --help` prints usage (binary name may differ — verify)"
+      - "`./external/pennyprompt/target/release/penny-cli --help` prints usage (CORRECTED 2026-05-16: the binary built from PennyPrompt's Cargo.toml is named `penny-cli`, NOT `pennyprompt`. See meta.external_binary_paths and LOCAL_SETUP.md.)"
+      - "`./external/clawcrate/target/release/clawcrate --help` prints usage"
       - "LOCAL_SETUP.md exists at repo root documenting the build commands"
       - "`external/` is gitignored (already covered by T002)"
     depends_on: [T002]
