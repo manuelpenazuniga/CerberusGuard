@@ -299,7 +299,7 @@ tasks:
     depends_on: [T101]
     estimate_minutes: 35
     owner_role: lead
-    status: pending
+    status: in_progress
     refs:
       - docs/AGENTTRUST_REPO_CLAUDE.md#step-1.2
       - docs/AGENTTRUST_PROJECT.md#4.4
