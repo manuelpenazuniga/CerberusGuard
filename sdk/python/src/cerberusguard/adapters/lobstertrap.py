@@ -64,6 +64,25 @@ def normalize_verdict(raw: str | None) -> str:
     return mapping.get(value, "LOG")
 
 
+_VERDICT_TOKENS = {"ALLOW", "DENY", "LOG", "HUMAN_REVIEW", "RATE_LIMIT", "QUARANTINE", "BLOCK"}
+
+
+def _split_verdict_and_action(raw: dict[str, Any]) -> tuple[str, str]:
+    """Lobster Trap audit events carry the verdict in the `action` field
+    (uppercase ALLOW/DENY/...) and the matched policy rule in `rule_name`.
+    Some forks or future versions may emit a separate `verdict` field. Handle
+    both shapes; never silently downgrade a real DENY to a LOG."""
+    verdict_field = raw.get("verdict")
+    action_field = raw.get("action")
+    if isinstance(verdict_field, str):
+        return verdict_field, str(
+            raw.get("rule_name") or raw.get("matched_rule") or action_field or "log_observed"
+        )
+    if isinstance(action_field, str) and action_field.upper() in _VERDICT_TOKENS:
+        return action_field, str(raw.get("rule_name") or raw.get("matched_rule") or "default")
+    return "LOG", str(action_field or raw.get("event_type") or "log_observed")
+
+
 def map_lobstertrap_event(raw: dict[str, Any]) -> dict[str, Any]:
     forced_correlation_id = os.environ.get("CERBERUS_CORRELATION_ID")
     payload = {
@@ -86,6 +105,7 @@ def map_lobstertrap_event(raw: dict[str, Any]) -> dict[str, Any]:
         or raw.get("request_id")
         or f"lt-{int(time.time() * 1000)}"
     )
+    verdict_raw, action_label = _split_verdict_and_action(raw)
     event: dict[str, Any] = {
         "timestamp": str(raw.get("timestamp") or default_timestamp()),
         "agent_id": str(raw.get("agent_id") or raw.get("agent") or "lobstertrap-adapter"),
@@ -94,8 +114,8 @@ def map_lobstertrap_event(raw: dict[str, Any]) -> dict[str, Any]:
         ),
         "correlation_id": correlation_id,
         "layer": "lobster_trap",
-        "verdict": normalize_verdict(raw.get("verdict")),
-        "action": str(raw.get("action") or raw.get("event_type") or "log_observed"),
+        "verdict": normalize_verdict(verdict_raw),
+        "action": action_label,
         "payload": payload,
     }
     return event
