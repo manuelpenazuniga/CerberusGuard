@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="img/logo.jpeg" alt="CerberusGuard logo" width="220" />
+
 # CerberusGuard
 
 ### Three heads. One guardian. Zero trust between layers.
